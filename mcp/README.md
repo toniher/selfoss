@@ -14,6 +14,12 @@ Environment variables:
 - `SELFOSS_USERNAME` / `SELFOSS_PASSWORD` (optional): omit if selfoss runs with no login,
   or if you rely on its trusted-localhost bypass (not recommended over a network).
 - `SELFOSS_MCP_TOKEN` (required only for `--transport http`): Bearer token clients must send.
+- `SELFOSS_MCP_ALLOWED_HOSTS` (`--transport http` behind a proxy): comma-separated
+  public host names the proxy forwards as `Host`, e.g. `rss.example.org`.
+  Add `:*` to accept any port, e.g. `rss.example.org:*`. Localhost is always
+  allowed. The server rejects any other `Host` with 421, and any `Origin`
+  other than `https://<allowed host>` or localhost with 403. This protects
+  against DNS rebinding.
 
 ## Running
 
@@ -96,8 +102,11 @@ only speak stdio, such as older Claude Desktop builds, can go through
 Troubleshooting with `curl`:
 
 - `401 Unauthorized`: the header is missing or the token does not match.
-- `421 Invalid Host header`: the server rejected the proxy's `Host` header
-  (FastMCP's DNS-rebinding protection).
+- `421 Invalid Host header`: the host is missing from
+  `SELFOSS_MCP_ALLOWED_HOSTS`. It must match the `Host` the proxy forwards
+  (`$host` in `nginx-proxy.conf`).
+- `403 Invalid Origin header`: a browser-based client sent an `Origin` other
+  than `https://<allowed host>`.
 - `406`: the request has no `Accept: application/json, text/event-stream`
   header. Real MCP clients send it.
 

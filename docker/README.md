@@ -53,9 +53,10 @@ Both ports bind to loopback. Put the host's own nginx in front of them with
    SELFOSS_USERNAME=you
    SELFOSS_PASSWORD=plain-text-password
    SELFOSS_MCP_TOKEN=$(openssl rand -hex 32)   # paste the output, .env does not run shell
+   SELFOSS_MCP_ALLOWED_HOSTS=rss.example.org   # public host(s) of the proxy, comma-separated
    ```
 
-   Compose refuses to start if one of the three is missing. The root
+   Compose refuses to start if one of the four is missing. The root
    `.gitignore` ignores `.env` and `*.ini`, so git skips both files.
 
 3. Start it:

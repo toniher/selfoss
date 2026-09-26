@@ -226,11 +226,21 @@ def main() -> None:
 
     import uvicorn
 
-    # Not redundant with uvicorn.run's host/port: FastMCP enables DNS-rebinding
-    # protection (localhost-only Host header) when host is 127.0.0.1, which
-    # would reject requests arriving through the reverse proxy.
     mcp.settings.host = args.host
     mcp.settings.port = args.port
+    # FastMCP("selfoss") was built with its default host 127.0.0.1, which
+    # enabled DNS-rebinding protection with a localhost-only Host allowlist,
+    # whatever --host says. Extend it with the reverse proxy's public host(s),
+    # otherwise proxied requests get 421 Invalid Host header.
+    extra_hosts = [
+        h.strip()
+        for h in os.environ.get("SELFOSS_MCP_ALLOWED_HOSTS", "").split(",")
+        if h.strip()
+    ]
+    security = mcp.settings.transport_security
+    if security is not None and extra_hosts:
+        security.allowed_hosts += extra_hosts
+        security.allowed_origins += [f"https://{h}" for h in extra_hosts]
     app = _BearerAuthMiddleware(mcp.streamable_http_app(), token)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 

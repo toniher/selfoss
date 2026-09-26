@@ -21,5 +21,6 @@ services:
       SELFOSS_USERNAME: ${SELFOSS_USERNAME:?set in docker/.env}
       SELFOSS_PASSWORD: ${SELFOSS_PASSWORD:?set in docker/.env}
       SELFOSS_MCP_TOKEN: ${SELFOSS_MCP_TOKEN:?set in docker/.env}
+      SELFOSS_MCP_ALLOWED_HOSTS: ${SELFOSS_MCP_ALLOWED_HOSTS:?set in docker/.env}
     ports:
       - 127.0.0.1:8765:8765
