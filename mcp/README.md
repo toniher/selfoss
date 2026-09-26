@@ -36,6 +36,71 @@ Bind `--host 127.0.0.1` (the default) and put a reverse proxy in front; see
 `docker/nginx-proxy.conf` in the repo root for a ready-to-adapt `location /mcp`
 block (Bearer token pass-through, buffering off for streaming responses).
 
+### Connecting an MCP client over HTTP
+
+The server speaks MCP's Streamable HTTP transport at the path `/mcp`. The
+proxy passes the path through unchanged, so the endpoint is:
+
+```
+https://rss.example.org/mcp
+```
+
+Every request must carry the header `Authorization: Bearer <SELFOSS_MCP_TOKEN>`.
+Generate the token once with `openssl rand -hex 32`, put that value in the
+server's environment (e.g. `docker/.env`), and give the same value to your
+client. `SELFOSS_URL`, `SELFOSS_USERNAME` and `SELFOSS_PASSWORD` are server-side
+settings. The client does not need them.
+
+Claude Code:
+
+```sh
+claude mcp add --transport http selfoss https://rss.example.org/mcp \
+  --header "Authorization: Bearer $SELFOSS_MCP_TOKEN"
+```
+
+Add `--scope user` to use it in every project. Run `claude mcp list` to
+check the connection.
+
+Clients configured with JSON (e.g. a project's `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "selfoss": {
+      "type": "http",
+      "url": "https://rss.example.org/mcp",
+      "headers": { "Authorization": "Bearer ${SELFOSS_MCP_TOKEN}" }
+    }
+  }
+}
+```
+
+Claude Code expands `${SELFOSS_MCP_TOKEN}` from your environment, so the token
+stays out of the file. Other clients may need the literal value. Clients that
+only speak stdio, such as older Claude Desktop builds, can go through
+[`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
+
+```json
+{
+  "mcpServers": {
+    "selfoss": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://rss.example.org/mcp",
+               "--header", "Authorization: Bearer ${SELFOSS_MCP_TOKEN}"],
+      "env": { "SELFOSS_MCP_TOKEN": "<token>" }
+    }
+  }
+}
+```
+
+Troubleshooting with `curl`:
+
+- `401 Unauthorized`: the header is missing or the token does not match.
+- `421 Invalid Host header`: the server rejected the proxy's `Host` header
+  (FastMCP's DNS-rebinding protection).
+- `406`: the request has no `Accept: application/json, text/event-stream`
+  header. Real MCP clients send it.
+
 ## Tools
 
 | Tool | What it does |
