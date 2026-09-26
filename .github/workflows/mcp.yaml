@@ -1,0 +1,39 @@
+# Separate from main.yaml so it doesn't need to touch upstream's workflow
+# file. Runs on changes that could break the MCP server: its own code, or
+# the documented API it depends on.
+name: MCP server
+
+on:
+  pull_request:
+    paths:
+      - "mcp/**"
+      - "docs/api-description.json"
+      - "index.php"
+      - ".github/workflows/mcp.yaml"
+  push:
+    paths:
+      - "mcp/**"
+      - "docs/api-description.json"
+      - "index.php"
+      - ".github/workflows/mcp.yaml"
+
+jobs:
+  test:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Install selfoss and selfoss-mcp dependencies
+        run: |
+          nix-shell -A ci --run 'npm run install-dependencies'
+          nix-shell -A ci --run 'pip install --user -e mcp'
+
+      - name: Run selfoss-mcp tests
+        run: nix-shell -A ci --run 'SELFOSS_TEST_STORAGE_BACKEND=sqlite python -m unittest discover -s mcp/tests'
+
+      - name: Check selfoss-mcp formatting
+        run: nix-shell -A ci --run 'black --check mcp/'

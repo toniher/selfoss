@@ -1,0 +1,16 @@
+# Applies to `docker build -f docker/Dockerfile ..` (BuildKit-only:
+# matches by Dockerfile basename, resolved against the build context root,
+# so this excludes things from the whole repo checkout, not just docker/).
+.git
+node_modules
+client/node_modules
+client/dist
+vendor
+data
+public
+docs
+tests
+utils
+mcp
+docker/compose.yaml
+*.md

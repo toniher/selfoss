@@ -1,0 +1,71 @@
+# Separate from main.yaml so it doesn't need to touch upstream's workflow
+# file. Builds both images on anything that could break them; only pushes
+# to a registry for tags (pushed, or manually dispatched on a tag), since that needs registry
+# secrets that aren't available to pull_request runs from forks.
+name: Docker images
+
+on:
+  pull_request:
+    paths:
+      - "docker/**"
+      - "mcp/**"
+      - "client/**"
+      - "src/**"
+      - "composer.lock"
+      - ".github/workflows/docker.yaml"
+  push:
+    branches: ["**"]
+    tags: ["*"]
+    paths:
+      - "docker/**"
+      - "mcp/**"
+      - "client/**"
+      - "src/**"
+      - "composer.lock"
+      - ".github/workflows/docker.yaml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      # Branch names (feature/x) aren't valid image tags, so only tag pushes
+      # and manual dispatches from a tag get a registry tag.
+      PUSH: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login comes first so both builds can push directly.
+      - name: Log in to the registry
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (and push) selfoss image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: ${{ env.PUSH == 'true' }}
+          tags: ${{ env.PUSH == 'true' && format('ghcr.io/{0}/selfoss:{1}', github.repository_owner, github.ref_name) || 'selfoss:ci' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build (and push) selfoss-mcp image
+        uses: docker/build-push-action@v6
+        with:
+          context: mcp
+          push: ${{ env.PUSH == 'true' }}
+          tags: ${{ env.PUSH == 'true' && format('ghcr.io/{0}/selfoss-mcp:{1}', github.repository_owner, github.ref_name) || 'selfoss-mcp:ci' }}
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp
