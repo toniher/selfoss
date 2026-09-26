@@ -27,13 +27,17 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
+      # The ci shell's Python (from upstream's flake.nix) has no pip, so a bare
+      # `pip` would be the runner's system one, installing for a different
+      # interpreter. Use a venv built from the nix Python instead, leaving
+      # flake.nix untouched. requests/bcrypt are for the integration harness.
       - name: Install selfoss and selfoss-mcp dependencies
         run: |
           nix-shell -A ci --run 'npm run install-dependencies'
-          nix-shell -A ci --run 'pip install --user -e mcp'
+          nix-shell -A ci --run 'python -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install -e mcp requests bcrypt'
 
       - name: Run selfoss-mcp tests
-        run: nix-shell -A ci --run 'SELFOSS_TEST_STORAGE_BACKEND=sqlite python -m unittest discover -s mcp/tests'
+        run: nix-shell -A ci --run 'SELFOSS_TEST_STORAGE_BACKEND=sqlite "$RUNNER_TEMP/venv/bin/python" -m unittest discover -s mcp/tests'
 
       - name: Check selfoss-mcp formatting
         run: nix-shell -A ci --run 'black --check mcp/'
