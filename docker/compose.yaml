@@ -1,4 +1,4 @@
-# Usage: cp docker/.env.example docker/.env  (or create it), then
+# Usage: create docker/.env and docker/config.ini (see docker/README.md), then
 #   docker compose -f docker/compose.yaml up -d --build
 services:
   selfoss:
