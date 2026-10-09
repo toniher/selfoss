@@ -185,9 +185,13 @@ final class Configuration {
 
             $propertyName = $property->getName();
             if ($propertyType === 'bool') {
-                $value = (bool) $value;
+                $value = match ($value) {
+                    '1', 'true' => true,
+                    '0', 'false' => false,
+                    default => throw new Exception("Unsupported value “{$value}” for property “{$propertyName}”, must be either “0” or “1”; or alternately, “false” or “true”.", 1),
+                };
             } elseif ($propertyType === 'int') {
-                $value = (int) $value;
+                $value = ctype_digit($value) ? (int) $value : throw new Exception("Unsupported value “{$value}” for property “{$propertyName}”, must be a number.", 1);
             } elseif ($propertyType === 'string') {
                 // Should already be a string.
             } elseif ($propertyType === LoggerLevel::class) {
