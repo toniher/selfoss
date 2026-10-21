@@ -18,11 +18,11 @@ WORKDIR /src
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs
 
-FROM toniher/nginx-php:nginx-1.27-php-8.2
+FROM toniher/nginx-php:nginx-1.29-php-8.4-sury
 
 RUN set -x; \
     apt-get update && apt-get -y upgrade && \
-    apt-get install -y --no-install-recommends php8.2-sqlite3 php8.2-mysql && \
+    apt-get install -y --no-install-recommends php8.4-sqlite3 php8.4-mysql && \
     rm -rf /var/lib/apt/lists/*
 
 # src/common.php reads env vars from $_ENV, which stays empty unless "E" is
@@ -31,7 +31,7 @@ RUN set -x; \
 # thing with `-d variables_order=EGPCS`. Without this, every SELFOSS_* env
 # var (including SELFOSS_CONFIG_DIR/_PATH) is silently ignored.
 RUN sed -i 's/variables_order = "GPCS"/variables_order = "EGPCS"/' \
-    /etc/php/8.2/cli/php.ini /etc/php/8.2/fpm/php.ini
+    /etc/php/8.4/cli/php.ini /etc/php/8.4/fpm/php.ini
 
 # php-fpm defaults to clearing the worker environment, which would silently
 # swallow every SELFOSS_* override too. Docker is the only env-passing
@@ -42,11 +42,11 @@ RUN sed -i 's/variables_order = "GPCS"/variables_order = "EGPCS"/' \
 RUN sed -i \
     -e 's/;clear_env = no/clear_env = no/' \
     -e 's/;catch_workers_output = yes/catch_workers_output = yes/' \
-    /etc/php/8.2/fpm/pool.d/www.conf \
- && sed -i 's#^error_log = .*#error_log = /proc/self/fd/2#' /etc/php/8.2/fpm/php-fpm.conf
+    /etc/php/8.4/fpm/pool.d/www.conf \
+ && sed -i 's#^error_log = .*#error_log = /proc/self/fd/2#' /etc/php/8.4/fpm/php-fpm.conf
 
 # .gitignore ignores *.ini, so this is written inline rather than copied.
-RUN printf 'max_execution_time = 600\ndefault_socket_timeout = 600\n' > /etc/php/8.2/fpm/conf.d/maxexectime.ini
+RUN printf 'max_execution_time = 600\ndefault_socket_timeout = 600\n' > /etc/php/8.4/fpm/conf.d/maxexectime.ini
 
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
